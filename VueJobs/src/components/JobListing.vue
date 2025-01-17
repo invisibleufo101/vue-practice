@@ -1,20 +1,35 @@
 <script setup>
-import jobJson from "@/assets/json/jobs.json"; // json data
+// import jobJson from "@/assets/json/jobs.json"; // json data
+import { ref, onMounted, reactive } from "vue";
+import PulseLoader from "vue-spinner/src/PulseLoader.vue";
 import JobListItem from "./JobListItem.vue";
-import { ref } from "vue";
+import axios from "axios";
 
 defineProps({
-  limit: {
-    type: Number,
-    default: 3,
-  },
+  limit: Number,
   showButton: {
     type: Boolean,
     default: false,
   },
 });
 
-const jobs = ref(jobJson); // initialize values for array "jobs" 
+// unlike ref(), reactive() can only take in objects and can't be reassigned. 
+const state = reactive({
+  jobs: [],
+  isLoading: true
+});
+
+// Loading mock server response asynchronously
+onMounted(async () => {
+  try {
+    const response = await axios.get("/api/jobs");
+    state.jobs = response.data;
+  } catch (error) {
+    console.error("Error fetching Jobs from server..." + error);
+  } finally {
+    state.isLoading = false;
+  }
+});
 </script>
 
 <template>
@@ -23,8 +38,12 @@ const jobs = ref(jobJson); // initialize values for array "jobs"
       <h2 class="text-3xl font-bold text-green-500 mb-6 text-center">
         Browse Jobs
       </h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <JobListItem v-for="job in jobs.slice((0, limit) || jobs.length)" :key="job.id" :job="job"/>
+      <!-- Show loading spinner while loading data from server -->
+      <div v-if="state.isLoading" class="text-center text-gray-500 py-6">
+        <PulseLoader/>
+      </div>
+      <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <JobListItem v-for="job in state.jobs.slice(0, limit || state.jobs.length)" :key="job.id" :job="job"/>
       </div>
     </div>
   </section>
